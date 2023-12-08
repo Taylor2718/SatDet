@@ -8,9 +8,12 @@ Created on Fri Nov 24 14:41:32 2023
 
 import numpy as np 
 import matplotlib.pyplot as plt
+import pandas as pd
 from scipy.stats import sem
 import datetime
 import os
+from empca import empca
+
 #import tweepy
 
 col = ['black','magenta','red','orange','lime','green','cyan','blue']
@@ -26,7 +29,7 @@ bands = [(10.705,10.945),
 #%%Reading data
 
 start_datetime = datetime.datetime(2023, 12, 2, 0)  # Start of analysis
-end_datetime = datetime.datetime(2023, 12, 2, 1)  # End of analysis
+end_datetime = datetime.datetime(2023, 12, 2, 10)  # End of analysis
 directory = "Transits" #Set to your local transits folder
 
 def format_datetime_string_directory(dt):
@@ -110,6 +113,8 @@ while current_datetime <= end_datetime:
                         specs.append(scan)         # Add spec
                     
                 nu = nu + 9750
+                specs = specs[:-1]
+                dates = dates[:-1]
     # Move to the next hour
     current_datetime += datetime.timedelta(hours=1)
     
@@ -124,8 +129,7 @@ ids = [format_id(date) for date in dates]
 #%%Creating waterfall
 specs = np.array(specs)
 base = np.median(specs,axis=0)
-#%%
-
+#%%don't use :D
 waterfall = specs-base
 
 #%%Plotting waterfall
@@ -213,5 +217,92 @@ plt.yscale('log')  # Use a logarithmic scale for the frequency axis
 plt.grid(which='both', axis='both', linestyle='--', linewidth=0.5)  # Add a grid with dashed lines
 plt.legend()
 plt.show()
+#%%
+df = pd.DataFrame({'dates': dates})
 
+# Sort the DataFrame by dates
+df.sort_values(by='dates', inplace=True)
 
+# Define the frequency of the chunks (10 minutes)
+chunk_frequency = pd.to_timedelta('5T')
+
+# Create a new column with the chunk labels
+df['chunk'] = (df['dates'] - df['dates'].iloc[0]) // chunk_frequency
+
+# Group by the chunks and get the indices for each chunk
+groups = df.groupby('chunk').apply(lambda x: x.index.tolist())
+
+spec_min = np.min(specs, axis=0)
+waterfalls = []
+waterfalls_max = []
+for group_indices in groups:
+
+    base = np.median(specs[group_indices], axis=0)
+
+    waterfall = specs[group_indices] - base
+    waterfall = np.vstack(waterfall)
+    waterfall_max = np.max(waterfall,axis=0)
+    waterfalls.append(waterfall)
+    waterfalls_max.append(waterfall_max)
+    
+waterfalls = np.vstack(waterfalls)
+waterfalls_max = np.vstack(waterfalls_max)
+#%%
+vmin = np.percentile(waterfalls, 2)
+vmax = np.percentile(waterfalls, 98)
+
+vmin = 0.77
+vmax = 1.5
+
+plt.figure(figsize=(10, 6))
+plt.imshow(waterfalls, aspect='auto', cmap='viridis',  vmin=vmin, vmax=vmax, origin = 'lower')
+
+# Set x-axis ticks and labels based on the frequency array 'nu'
+num_ticks = 6  # Adjust the number of ticks as needed
+
+ticks_positions = np.linspace(0, len(nu) - 1, num_ticks)
+ticks_labels = np.linspace(10000, 12000, num_ticks)
+
+plt.xticks(ticks_positions, ticks_labels)
+
+plt.colorbar(label='Amplitude')
+plt.xlabel('Frequency')
+plt.ylabel('Time')
+plt.title('Waterfall Plot')
+plt.show()
+
+#%%Plotting mean waterfall (collapsing time)
+
+mean_waterfall = np.mean(waterfalls,axis=0)
+sem_waterfall = sem(waterfalls,axis=0)
+max_waterfall = np.max(waterfalls,axis=0)
+min_waterfall = np.min(waterfalls,axis=0)
+
+plt.plot(nu,mean_waterfall, '-', color = 'black', label = 'Mean')
+plt.plot(nu,min_waterfall, color = 'blue', label = 'Min Hold')
+plt.plot(nu,max_waterfall, color = 'red', label = 'Max Hold')
+
+#plt.fill_between(nu, mean_waterfall - sem_waterfall, mean_waterfall + sem_waterfall, color='blue', alpha=0.1, label='SEM')
+plt.xlabel("Frequency (MHz)")
+plt.ylabel("Relative Amplitude (a.u.)")
+plt.legend()
+plt.grid()
+#%%
+plt.plot(nu,waterfalls_max[9], '-', color = 'black', label = 'Mean')
+#%%
+mean_specs = np.mean(specs,axis=0)
+max_specs = np.max(specs,axis=0)
+min_specs = np.min(specs,axis=0)
+
+plt.plot(nu,mean_specs, '-', color = 'black', label = 'Mean')
+plt.plot(nu,min_specs, color = 'blue', label = 'Min Hold')
+plt.plot(nu,max_specs, color = 'red', label = 'Max Hold')
+
+plt.xlabel("Frequency (MHz)")
+plt.ylabel("Power (dB)")
+plt.legend()
+plt.grid()
+#%%
+
+model = empca(spectral_data_matrix, weights = spectral_noise_data_matrix,
+              niter=empca_niter_size, nvec=empca_nvec_size)
