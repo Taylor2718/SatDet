@@ -44,7 +44,7 @@ bands = [(10.705,10.945),
 
 satillite_count_per_band_day1 = [] 
 satillite_count_per_band_day2 = []       
-satillite_count_per_band_day3 = []                                                     
+satillite_count_per_band_day3 = []                                               
 #%%Reading data
 
 start_datetime = datetime.datetime(2023, 12, 2, 00)  # Start of analysis
@@ -711,16 +711,25 @@ for i in range(len(satillite_count_per_band_day1)):
     mean_counts = []
     yerror = []
     for a in range(len(satillite_count_per_band_day1[i])):
-        mean_satillite_count = (satillite_count_per_band_day1[i][a] + satillite_count_per_band_day2[i][a])/2
-        error = sem([satillite_count_per_band_day1[i][a], satillite_count_per_band_day2[i][a]])
+        mean_satillite_count = (satillite_count_per_band_day1[i][a] + satillite_count_per_band_day2[i][a] + satillite_count_per_band_day3[i][a])/3
+        error = sem([satillite_count_per_band_day1[i][a], satillite_count_per_band_day2[i][a], satillite_count_per_band_day3[i][a]])
         mean_counts.append(mean_satillite_count)
         yerror.append(error)
     per_band.append(mean_counts)
     bars.append(yerror)
 
+fig, ax = plt.subplots(nrows=5, ncols=2, figsize=(10, 8), sharex = True)
+#fig.tight_layout()
+#fig.subplots_adjust(bottom=0.95)#, right = 0.95)
+ax = ax.flatten()
 for i in range(len(per_band)):
-    plt.plot(hours, per_band[i], label = i)
-    plt.errorbar(hours, per_band[i], yerr = bars[i])
-    plt.legend()
-    plt.title(ourbands[i])
-    plt.show()
+    ax[i].plot(hours, per_band[i], color = 'blue', label = ourbands[i])
+    ax[i].errorbar(hours, per_band[i], yerr = bars[i], ecolor = 'red', color = 'blue', capsize = 4)
+    ax[i].legend(loc = 'upper left')
+    #fig.suptitle("Intraday Profiles of Satillite Counts Per Band")
+    #ax[i].set_xlabel("Hour")
+    #ax[i].set_ylabel("Mean Satillite Count")
+    fig.text(0.5, 0.04, 'Hour', ha='center')
+    fig.text(0.04, 0.5, 'Mean Satillite Count', va='center', rotation='vertical')
+    plt.legend(loc = 'upper left')
+plt.show()
