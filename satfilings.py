@@ -10,7 +10,7 @@ import matplotlib
 matplotlib.rcParams.update(matplotlib.rcParamsDefault)
 import matplotlib.pyplot as plt
 
-#%%
+#%%Current Satellite pie chart
 
 sat_lab = ['Localisation: 143', 'Communication: 5870', 'Earth Observation: 192', 'Space Observation: 78']
 sat_count = [143, 5870, 192, 78]
@@ -46,11 +46,15 @@ sat_lab = ['SG1, SGA2, SG2', 'OW, OW2', 'KP', 'XW', '$GW^{*}$', 'YNH', '$HWH^{*}
 sat_count = [34396, 7088, 3232, 966, 12992, 1000, 2000, 2000, 13620, 300, 1440, 1190, 3080,
              116640, 337323]
 
+current_count = [5206, 634, 2, 12, 0, 8, 0, 8, 0, 0, 0, 0, 0, 0, 3]
+
 sat_count = np.array(sat_count)
 sat_count = sat_count
 
 plt.figure(figsize=(10, 6))
 plt.bar(range(len(sat_lab)), sat_count, color='skyblue', label='Number of Satellite Fillings')
+plt.bar(range(len(sat_lab)), current_count, color='blue', label='Current Number of Satellites')
+
 
 plt.xlabel('Satellite Constellation', fontsize=12)
 plt.ylabel(r'Number of Satellites ($\log_{10}$)', fontsize=12)
