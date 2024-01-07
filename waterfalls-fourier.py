@@ -197,18 +197,65 @@ windowed_data = hann(len(filtered_mean_waterfall)) * filtered_mean_waterfall
 # Calculate the frequency values
 frequencies = np.fft.fftfreq(len(fft_result), d=time_step)
 white_noise = np.ones_like(frequencies)
-one_over_f_noise = 1 / (frequencies)**(1)
+one_over_f_noise = 1 / (frequencies)**(1.4)
 one_over_f_noise[0] = 0  # Avoid division by zero
 # Plot the magnitude spectrum with a logarithmic scale for the frequency axis
 plt.plot(frequencies, np.abs(fft_result), label='FFT')
 plt.plot(frequencies, white_noise, label='White Noise', linestyle='--')
 plt.plot(frequencies, one_over_f_noise, label='1/f Noise', linestyle='--')
 
-plt.title('Fourier Transform of Relative Amplitude Data')
 plt.xlabel('Frequency (Hz)')
-plt.ylabel('Amplitude')
+plt.ylabel('Waterfall Amplitude (dB)')
 plt.xscale('log')  # Use a logarithmic scale for the frequency axis
 plt.yscale('log')  # Use a logarithmic scale for the frequency axis
 plt.grid(which='both', axis='both', linestyle='--', linewidth=0.5)  # Add a grid with dashed lines
 plt.legend()
+plt.savefig('Figures/FT.svg', format='svg', bbox_inches='tight')
+
 plt.show()
+#%%
+mean_specs = np.mean(specs,axis=0)
+max_specs = np.max(specs,axis=0)
+min_specs = np.min(specs,axis=0)
+
+plt.plot(nu,mean_specs, '-', color = 'black', label = 'Mean')
+plt.plot(nu,min_specs, color = 'blue', label = 'Min Hold')
+plt.plot(nu,max_specs, color = 'red', label = 'Max Hold')
+
+plt.xlabel("Frequency (MHz)")
+plt.ylabel("Power (dB)")
+plt.legend()
+plt.grid()
+
+#%%
+from matplotlib.ticker import ScalarFormatter, LogLocator, FuncFormatter
+
+# Create subplots with 2 rows and 1 column
+fig, axs = plt.subplots(2, 1, figsize=(8, 10))
+
+# Plot the first graph in the first subplot
+axs[1].plot(frequencies, np.abs(fft_result), label='FFT')
+axs[1].plot(frequencies, white_noise, label='White Noise', linestyle='--')
+axs[1].plot(frequencies, one_over_f_noise, label='1/f Noise', linestyle='--')
+
+axs[1].set_xlabel('Frequency (Hz)')
+axs[1].set_ylabel('$Amplitude_{w}$ (dB)')
+axs[1].set_xscale('log')
+axs[1].set_yscale('log')
+axs[1].set_xlim(0.001,1.7)
+axs[1].set_ylim(0.01,10**(5))
+axs[1].grid(which='both', axis='both', linestyle='--', linewidth=0.5)
+axs[1].legend()
+
+axs[0].plot(nu, mean_specs, '-', color='black', label='Mean')
+axs[0].plot(nu, min_specs, color='blue', label='Min Hold')
+axs[0].plot(nu, max_specs, color='red', label='Max Hold')
+
+axs[0].set_xlabel("Frequency (MHz)")
+axs[0].set_ylabel("Power (dB)")
+axs[0].legend()
+axs[0].grid()
+
+# Adjust layout to prevent overlap of subplots
+plt.tight_layout()
+plt.savefig('Figures/FT-Specs.svg', format='svg', bbox_inches='tight')

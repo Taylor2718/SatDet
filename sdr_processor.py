@@ -12,7 +12,7 @@ import pandas as pd
 from scipy.stats import sem
 import datetime
 import os
-from empca import empca
+from empca_file import empca
 
 #import tweepy
 
@@ -29,7 +29,7 @@ bands = [(10.705,10.945),
 #%%Reading data
 
 start_datetime = datetime.datetime(2023, 12, 2, 0)  # Start of analysis
-end_datetime = datetime.datetime(2023, 12, 2, 10)  # End of analysis
+end_datetime = datetime.datetime(2023, 12, 4, 10)  # End of analysis
 directory = "Transits" #Set to your local transits folder
 
 def format_datetime_string_directory(dt):
@@ -126,7 +126,7 @@ def format_id(date):
 
 # Create a list of IDs
 ids = [format_id(date) for date in dates]
-#%%Creating waterfall
+
 specs = np.array(specs)
 base = np.median(specs,axis=0)
 #%%don't use :D
@@ -217,14 +217,14 @@ plt.yscale('log')  # Use a logarithmic scale for the frequency axis
 plt.grid(which='both', axis='both', linestyle='--', linewidth=0.5)  # Add a grid with dashed lines
 plt.legend()
 plt.show()
-#%%
+#%%Group
 df = pd.DataFrame({'dates': dates})
 
 # Sort the DataFrame by dates
 df.sort_values(by='dates', inplace=True)
 
 # Define the frequency of the chunks (10 minutes)
-chunk_frequency = pd.to_timedelta('5T')
+chunk_frequency = pd.to_timedelta('1T')
 
 # Create a new column with the chunk labels
 df['chunk'] = (df['dates'] - df['dates'].iloc[0]) // chunk_frequency
@@ -247,7 +247,7 @@ for group_indices in groups:
     
 waterfalls = np.vstack(waterfalls)
 waterfalls_max = np.vstack(waterfalls_max)
-#%%
+#%%Plotting waterfalls
 vmin = np.percentile(waterfalls, 2)
 vmax = np.percentile(waterfalls, 98)
 
@@ -303,6 +303,87 @@ plt.ylabel("Power (dB)")
 plt.legend()
 plt.grid()
 #%%
+empca_niter_size = 10
+empca_nvec_size = 6
+m = empca(waterfalls_max, niter=empca_niter_size, nvec=empca_nvec_size)
 
-model = empca(spectral_data_matrix, weights = spectral_noise_data_matrix,
-              niter=empca_niter_size, nvec=empca_nvec_size)
+waterfall_empca = m.model
+eigvec = m.eigvec
+coeff = m.coeff
+#%%
+plt.plot(nu, waterfalls_max[10], label = "Data", color='black',alpha=0.2)
+plt.plot(nu, waterfall_empca[10], label = "Linear EMPCA", color='blue', alpha=0.7)
+#%%
+num_rows = (empca_nvec_size + 1) // 2
+num_cols = 2
+
+fig, axes = plt.subplots(num_rows, num_cols, figsize=(10, 12))
+
+if num_rows == 1:
+    axes = [axes]
+    
+
+fig.text(0.5, 0.08, '$λ_{rest}$ [Ångström]', ha='center', va='center', fontsize=14)
+fig.text(0.06, 0.5, '$F_{interpolated}$(λ)', ha='center', va='center', rotation='vertical', fontsize=14)
+
+for i in range(empca_nvec_size):
+    row_idx = i // num_cols
+    col_idx = i % num_cols
+    ax = axes[row_idx][col_idx]
+    ax.plot(nu, eigvec[i], label=r"$\phi_{%d}$" % (i+1))
+    ax.legend(loc='upper right')  # Place the legend in the top right corner
+    ax.grid(True, linestyle='--', alpha=0.5)
+    
+#%%
+from matplotlib.colors import LinearSegmentedColormap
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+coeff_size = coeff.shape[1]
+
+fig, axes = plt.subplots(coeff_size, coeff_size + 1, figsize=(20, 20), 
+                         gridspec_kw={'hspace': 0.0, 'wspace': 0.0})
+
+bin_size = int(np.round(np.sqrt(coeff.shape[0])))
+
+for i in range(coeff_size):
+    for j in range(i):
+        
+        ax=axes[i, j]
+                
+        scatter = ax.scatter(coeff[:, i], coeff[:, j],
+                             marker='.', s=20, alpha = 0.5)
+        ax.grid(True)
+
+        if i - j == 1:
+            ax.annotate(f"PCA {j+1}", xy=(0.5, 1.05), xycoords='axes fraction', 
+                        ha='center', fontsize=10, color='black')
+            ax.annotate(f"PCA {i+1}", xy=(1.1, 0.5), xycoords='axes fraction', 
+                    ha='center', fontsize=10, color='black', rotation=270, va='center')
+    
+    # Remove ticks and labels for the empty subplots
+    for j in range(i, coeff_size):
+        axes[i, j].axis('off')
+
+    # Plot eigenspectra components in the 10th column
+    ax = axes[i, coeff_size] #coeff_size = 10th column
+    ax.plot(nu, eigvec[i], color='black',alpha=0.5)
+    ax.annotate(r"$\phi_{%d}$" % (i+1), xy=(1.1, 0.5), xycoords='axes fraction', 
+                ha='center', fontsize=12, color='blue', va='center')
+    ax.set_xlim(min(nu), max(nu))
+    ax.set_ylim(min(eigvec[i]), max(eigvec[i]))
+    ax.tick_params(axis='x', labelsize=8)
+    ax.tick_params(axis='y', labelsize=8)
+    
+#divider = make_axes_locatable(axes[0, 0])
+#cax = divider.append_axes("top", size="5%", pad=0.2)
+
+# Add a horizontal colorbar indicating data density
+
+
+# Rotate the colorbar tick labels to be horizontal
+plt.show()
+    
+
+
+
+

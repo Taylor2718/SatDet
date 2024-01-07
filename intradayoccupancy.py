@@ -723,30 +723,71 @@ band_no = list(range(10))
 hours = list(range(24))
 
 per_band = []
+per_band_count = []
 bars = []
+bars_count = []
 for i in range(10):
-    mean_occupancy = []
+    mean_counts = []
     yerror = []
+        
+    mean_occupancy = []
+    yerror_count = []
     for a in range(24):
         mean_hour_occupancy = ((sum(widths_day1[a+i*24][0]) + sum(widths_day2[a+i*24][0]) + sum(widths_day3[a+i*24][0]))/len(hour_waterfalls))/3
         error = sem([sum(widths_day1[a+i*24][0])/len(hour_waterfalls),  sum(widths_day2[a+i*24][0])/len(hour_waterfalls), sum(widths_day3[a+i*24][0])/len(hour_waterfalls)])
         mean_occupancy.append(mean_hour_occupancy)
         yerror.append(error)
+        mean_satillite_count = (satillite_count_per_band_day1[i][a] + satillite_count_per_band_day2[i][a] + satillite_count_per_band_day3[i][a])/3
+        error_count = sem([satillite_count_per_band_day1[i][a], satillite_count_per_band_day2[i][a], satillite_count_per_band_day3[i][a]])
+        mean_counts.append(mean_satillite_count)
+        yerror_count.append(error_count)
+    per_band_count.append(mean_counts)
+    bars_count.append(yerror_count)
     per_band.append(mean_occupancy)
     bars.append(yerror)
 #%%
-fig, ax = plt.subplots(nrows=5, ncols=2, figsize=(10, 8), sharex = True)
+fig, ax = plt.subplots(nrows=5, ncols=2, figsize=(10, 12), sharex=True, sharey=True)
 #fig.tight_layout()
 #fig.subplots_adjust(bottom=0.95)#, right = 0.95)
 ax = ax.flatten()
+mean_oc = []
+mean_oc_err = []
 for i in range(len(per_band)):
-    ax[i].plot(hours, per_band[i], color = 'blue', label = ourbands[i])
-    ax[i].errorbar(hours, per_band[i], yerr = bars[i], ecolor = 'red', color = 'blue', capsize = 4)
-    ax[i].legend(loc = 'upper left')
-    #fig.suptitle("Intraday Profiles of Satillite Counts Per Band")
-    #ax[i].set_xlabel("Hour")
-    #ax[i].set_ylabel("Mean Satillite Count")
-    fig.text(0.5, 0.04, 'Hour', ha='center')
-    fig.text(0.04, 0.5, 'Hourly Mean Occupany Per Band', va='center', rotation='vertical')
-    plt.legend()
+    mean_occupancy = np.mean(per_band[i])
+    mean_oc.append(mean_occupancy)
+    cum_error = 0
+    for j in range (len(per_band)):
+        cum_error += (bars[i][j]/2)**2
+    
+    cum_error = np.sqrt(cum_error)
+    mean_oc_err.append(cum_error)
+    if i == 2 or i==3 or i==4:
+        f = f'{ourbands[i]} Protected Band'
+        f_ = None
+    elif i == 0:
+        f_ = "Mean"
+    else:
+        f = f'{ourbands[i]}'
+        f_ = None
+    ax[i].axhline(mean_occupancy, color='grey', linestyle='--', label=f_)
+
+    ax[i].plot(hours, per_band[i], 
+                   color = 'blue')
+    ax[i].errorbar(hours, per_band[i], yerr = bars[i], fmt = 'x', ecolor = 'red', 
+                   color = 'blue', capsize = 4, markerfacecolor='blue', markersize=6, label=f)
+
+    ax[i].legend()
+
+    fig.text(0.5, 0.04, 'Hour', ha='center', fontsize=14)
+    fig.text(0.04, 0.5, 'Hourly Mean Occupancy Per Band', va='center', rotation='vertical', fontsize=14)
+    
+plt.savefig("Figures/Occupancy.svg", type="svg", bbox_inches='tight', )
 plt.show()
+
+
+
+
+
+
+
+

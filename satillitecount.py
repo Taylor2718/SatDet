@@ -3,6 +3,8 @@
 Created on Sat Dec  9 21:30:02 2023
 
 @author: nehay
+
+3 hours, now with means
 """
 import numpy as np 
 import matplotlib.pyplot as plt
@@ -212,6 +214,52 @@ filtered_mean_waterfalls_protect = mean_waterfalls_protect #[~mask]
 #%%
 no_of_peaks_antenna = []
 
+
+lower_1 = 11200
+upper_1 = 11450 
+
+# Combine conditions to extract columns within the specified range
+mask_1 = (nu > lower_1) & (nu < upper_1)
+specs_1 = specs[:, mask_1]
+waterfalls_1 = waterfalls[:, mask_1]
+nu_1 = nu[mask_1]
+mean_waterfalls_1 = np.sum(waterfalls_1,axis=1) - np.mean(waterfalls_1,axis=1)
+mean_specs_1 = np.mean(specs_1,axis=0)
+
+# mean_waterfall_2 = np.sum(waterfall_1,axis=1) - np.mean(waterfall_1,axis=1)
+# mean_specs_2 = np.sum(specs_1,axis=0) - np.mean(specs_1,axis=0)
+
+mask = mean_waterfalls_1 < -100
+dates = np.array(dates)
+# Apply the mask to filter out unwanted indices
+filtered_dates = dates#[~mask]
+mean_waterfalls_1[mask] = -2
+filtered_mean_waterfalls = mean_waterfalls_1 #[~mask]
+
+# mask2 = mean_waterfall_2 < -1
+# #dates = np.array(dates)
+# # Apply the mask to filter out unwanted indices
+# filtered_dates2 = dates[~mask2]
+# filtered_mean_waterfall2 = mean_waterfall_2[~mask2]
+
+# plt.plot(filtered_dates, filtered_mean_waterfalls)
+# plt.show()
+
+max_noise = max(filtered_mean_waterfalls_protect)
+peaks, _ = find_peaks(filtered_mean_waterfalls, height=max_noise+1, width=8, distance = 120)
+waterfall_color = "#87CEEB"  # Light Sky Blue
+peak_color = "#FF6347"  # Tomato
+max_noise_color = "#A9A9A9"  # Dark Gray
+plt.plot(filtered_dates, filtered_mean_waterfalls, label = "Waterfall Sum",alpha=0.5)
+plt.plot(filtered_dates[peaks], filtered_mean_waterfalls[peaks], "x", label = "Peak", color='blue')
+plt.hlines(max_noise, filtered_dates[0], filtered_dates[-1], linestyle='--', label='Max Noise Threshold', color='black')
+plt.ylabel("Amplitude (dB)")
+plt.xlabel("Time")
+plt.legend()
+plt.savefig("Figures/Peak-Detector.svg", format='svg', bbox_inches='tight')
+
+
+#%%
 for i in ourbands:
     
     lower_1 = i[0]

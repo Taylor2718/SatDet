@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Dec 12 09:05:10 2023
+Created on Tue Dec 12 08:50:24 2023
 
 @author: taylo
 """
@@ -14,25 +14,10 @@ import datetime
 import os
 from empca_file import empca
 
-ourbands = [(10000,10200),
-            (10200,10400),
-            (10400,10600),
-            (10600,10800),
-            (10800,10950),
-            (10950,11200),
-            (11200,11450),
-            (11450,11700),
-            (11700,11950),
-            (11950,12100)]   
-
-probands = [(10400,10600),
-  (10600,10800),
-  (10800,10950),]
-
 #%%Reading data
 
 start_datetime = datetime.datetime(2023, 12, 2, 0)  # Start of analysis
-end_datetime = datetime.datetime(2023, 12, 4, 23)  # End of analysis
+end_datetime = datetime.datetime(2023, 12, 2, 10)  # End of analysis
 directory = "Transits" #Set to your local transits folder
 
 def format_datetime_string_directory(dt):
@@ -168,98 +153,27 @@ mean_waterfall = np.mean(waterfalls,axis=0)
 sem_waterfall = sem(waterfalls,axis=0)
 max_waterfall = np.max(waterfalls,axis=0)
 min_waterfall = np.min(waterfalls,axis=0)
+#%%Plotting Fourier transform
+time_step = np.diff(dates).mean().total_seconds()
+fft_result = np.fft.fft(mean_waterfall)
 
-medians=np.median(waterfalls_max, axis=1) #normalising eigenspectra suitable for PCA
-waterfalls_max = waterfalls_max / medians[:,np.newaxis]
-#%%Perform EMPCA
-empca_niter_size = 10 #10 iterations
-empca_nvec_size = 6 #using 6 eigenspec
-m = empca(waterfalls_max, niter=empca_niter_size, nvec=empca_nvec_size)
+exp = np.log10(np.max(np.abs(fft_result)))/5
 
-waterfall_empca = m.model
-eigvec = m.eigvec
-coeff = m.coeff
+# Calculate the frequency values
+frequencies = np.fft.fftfreq(len(fft_result), d=time_step)
+white_noise = np.ones_like(frequencies)
+one_over_f_noise = 1 / (frequencies)**(1)
+one_over_f_noise[0] = 0  # Avoid division by zero
+# Plot the magnitude spectrum with a logarithmic scale for the frequency axis
+plt.plot(frequencies, np.abs(fft_result), label='FFT')
+plt.plot(frequencies, white_noise, label='White Noise', linestyle='--')
+plt.plot(frequencies, one_over_f_noise, label='1/f Noise', linestyle='--')
 
-#%%Plotting EMPCA reconstruction
-i=7
-plt.plot(nu, waterfalls_max[i], label = "Data", color='black',alpha=0.2)
-plt.plot(nu, waterfall_empca[i], label = "Linear EMPCA Reconstruction", color='blue', alpha=0.7)
+plt.title('Fourier Transform of Relative Amplitude Data')
+plt.xlabel('Frequency (Hz)')
+plt.ylabel('Amplitude')
+plt.xscale('log')  # Use a logarithmic scale for the frequency axis
+plt.yscale('log')  # Use a logarithmic scale for the frequency axis
+plt.grid(which='both', axis='both', linestyle='--', linewidth=0.5)  # Add a grid with dashed lines
 plt.legend()
-plt.xlabel("Frenquency (MHz)")
-plt.ylabel("Relative Amplitude")
-
-plt.savefig("Figures/EMPCA-Recon.svg", format='svg', bbox_inches='tight')
-
-#%%Plotting eigenspectra
-num_rows = (empca_nvec_size + 1) // 2
-num_cols = 2
-
-fig, axes = plt.subplots(num_rows, num_cols, figsize=(10, 12))
-
-if num_rows == 1:
-    axes = [axes]
-    
-
-fig.text(0.5, 0.05, 'Frequency (MHz)', ha='center', va='center', fontsize=14)
-fig.text(0.06, 0.5, 'Relative Ampltiude', ha='center', va='center', rotation='vertical', fontsize=14)
-
-for i in range(empca_nvec_size):
-    row_idx = i // num_cols
-    col_idx = i % num_cols
-    ax = axes[row_idx][col_idx]
-    ax.plot(nu, eigvec[i], label=r"$\phi_{%d}$" % (i+1))
-    ax.legend(loc='upper left')  # Place the legend in the top right corner
-    ax.grid(True, linestyle='--', alpha=0.5)
-
-mean_pro = [np.mean(eigvec[0][(nu >= probands[0][0]) & (nu < probands[-1][1])])]
-amp_eigvec = eigvec[0] - mean_pro
-max_values = [np.max(amp_eigvec[(nu >= start_freq) & (nu < end_freq)]) for start_freq, end_freq in ourbands]
-max_values = np.array(max_values)
-rel_values = max_values / np.max(max_values)
-
-plt.savefig("Figures/EMPCA-Eigvec.svg", format='svg', bbox_inches='tight')
-
-#%%Plotting coefficients
-
-coeff_size = coeff.shape[1]
-
-fig, axes = plt.subplots(coeff_size, coeff_size + 1, figsize=(12, 10), 
-                         gridspec_kw={'hspace': 0.0, 'wspace': 0.0})
-
-bin_size = int(np.round(np.sqrt(coeff.shape[0])))
-
-for i in range(coeff_size):
-    for j in range(i):
-        
-        ax=axes[i, j]
-                
-        scatter = ax.scatter(coeff[:, i], coeff[:, j],
-                             marker='.', s=20, alpha = 0.5)
-        ax.grid(True)
-
-        if i - j == 1:
-            ax.annotate(f"PCA {j+1}", xy=(0.5, 1.05), xycoords='axes fraction', 
-                        ha='center', fontsize=10, color='black')
-            ax.annotate(f"PCA {i+1}", xy=(1.1, 0.5), xycoords='axes fraction', 
-                    ha='center', fontsize=10, color='black', rotation=270, va='center')
-    
-    # Remove ticks and labels for the empty subplots
-    for j in range(i, coeff_size):
-        axes[i, j].axis('off')
-
-    # Plot eigenspectra components in the 10th column
-    ax = axes[i, coeff_size] #coeff_size = 10th column
-    ax.plot(nu, eigvec[i], color='black',alpha=0.5)
-    ax.annotate(r"$\phi_{%d}$" % (i+1), xy=(1.1, 0.5), xycoords='axes fraction', 
-                ha='center', fontsize=12, color='blue', va='center')
-    ax.set_xlim(min(nu), max(nu))
-    ax.set_ylim(min(eigvec[i]), max(eigvec[i]))
-    ax.tick_params(axis='x', labelsize=8)
-    ax.tick_params(axis='y', labelsize=8)
-    
-# Rotate the colorbar tick labels to be horizontal
 plt.show()
-
-plt.savefig("Figures/EMPCA-Coeff.svg", format='svg', bbox_inches='tight')
-
-

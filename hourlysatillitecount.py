@@ -502,11 +502,14 @@ for i in range(len(satillite_count_for_antenna)):
     bars2.append(error)
 #%%
 band_no = list(range(10))
-
-plt.plot(band_no, per_band2, 'x-', label = 'Antenna', color = 'blue')
-plt.errorbar(band_no, per_band2, yerr = bars1, ecolor = 'red', capsize = 4 )
-plt.plot(band_no, per_band1, 'x-', label = 'Satillite Dish', color = 'green')
-plt.errorbar(band_no, per_band1, yerr = bars1, ecolor = 'red', capsize = 4 )
+plt.plot(band_no,per_band2, '-')
+plt.errorbar(band_no, per_band2, yerr = bars2, fmt = 'o', ecolor = 'blue', 
+               color = 'blue', capsize = 4, markerfacecolor='black', markersize=6, label = "Antenna Count")
+plt.plot(band_no,per_band1, '-')
+plt.errorbar(band_no, per_band1, yerr = bars1, fmt = 'o', ecolor = 'red', 
+               color = 'red', capsize = 4, markerfacecolor='black', markersize=6, label = "Satellite Count")
+plt.plot(band_no, occupancy_per_band_antenna, 'x-', label = "Antenna")
+plt.plot(band_no, occupancy_per_band_satillites, 'x-', label = "Satillite")
 plt.legend()
 plt.title("Mean Hourly Satillite Count")
 plt.ylabel('Count')
@@ -514,4 +517,41 @@ plt.xlabel('Band')
 #txt="Comparitive satillite count over 3 hours of using our" "3D printed antenna vs a satillite dish on consecutuve days, from 16:00 - 19:00"
 #plt.figtext(0.5, 0.01, txt, wrap=True, horizontalalignment='center', fontsize=12)
 plt.show()
-#
+
+#%%
+
+fig, ax1 = plt.subplots(figsize=(10, 12))
+
+# Plotting the first set of data with error bars
+ax1.plot(band_no, per_band2, '-', label="Antenna Count")
+ax1.errorbar(band_no, per_band2, yerr=bars2, fmt='o', ecolor='blue', color='blue', capsize=4, markerfacecolor='black', markersize=6)
+
+# Plotting the second set of data with error bars on the opposite y-axis
+ax2 = ax1.twinx()
+ax1.plot(band_no, per_band1, '-', color= "red", label="Satellite Count")
+ax1.errorbar(band_no, per_band1, yerr=bars1, fmt='o', ecolor='red', color='red', capsize=4, markerfacecolor='grey', markersize=6)
+
+# Plotting the lines with markers on the opposite y-axis
+ax2.bar(band_no, occupancy_per_band_antenna, color="none", edgecolor="black", label="Antenna Occupancy")
+ax2.bar(band_no, occupancy_per_band_satillites, color = "grey", alpha=0.3, label="Satellite Occupancy")
+
+# Setting labels and title
+ax1.set_xlabel('Band', fontsize=12)
+ax1.set_ylabel('Antenna Count', fontsize=12)
+ax2.set_ylabel('Satellite Count / Occupancy', fontsize=12)
+
+# Adding legend
+ax1.legend(loc='upper left')
+ax2.legend(loc='upper right')
+
+ax1.set_ylim(-5,60)
+
+plt.savefig("Figures/Antenna-Dish.svg", format="svg", bbox_inches='tight')
+
+
+
+
+
+
+
+
